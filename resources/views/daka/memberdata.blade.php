@@ -18,8 +18,8 @@
             <div class="tab-pane active" id="panel-758874">
                 <form  action="/daka/dakaData" method="post" enctype="multipart/form-data">
                     <input type="hidden" name="_token" value="<?php echo csrf_token(); ?>">
-                    <button type="button" class="btn btn-default" onclick="window.location.href='/daka/exportMembers'">导出全部数据</button>
-                    <button type="button" class="btn btn-default" onclick="window.location.href = '/daka/index'">返回</button>
+                    <button type="button" class="btn btn-success" onclick="window.location.href='/daka/exportMembers'">导出全部数据</button>
+                    <button type="button" class="btn btn-info" onclick="window.location.href = '/daka/index'">返回</button>
                 </form>
             </div>
             <table class="table">

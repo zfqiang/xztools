@@ -19,8 +19,8 @@
                 <form  action="/daka/dakaData" method="post" enctype="multipart/form-data">
                     <input type="hidden" name="_token" value="<?php echo csrf_token(); ?>">
                     姓名：<input value="{{$name}}" name="name">
-                    <button type="submit" class="btn btn-default">提交</button>
-                    <button type="button" class="btn btn-default" onclick="window.location.href = '/daka/index'">返回</button>
+                    <button type="submit" class="btn btn-success">提交</button>
+                    <button type="button" class="btn btn-info" onclick="window.location.href = '/daka/index'">返回</button>
                 </form>
             </div>
             <table class="table">

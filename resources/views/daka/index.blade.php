@@ -33,16 +33,19 @@
                         <form  action="/daka/importData" method="post" enctype="multipart/form-data">
                             <input type="hidden" name="_token" value="<?php echo csrf_token(); ?>">
                             <div class="form-group">
-                                <label for="exampleInputFile">选择文件</label><input type="file" name="file"/>
+                                <label for="exampleInputFile">选择要导入的考勤数据</label><input type="file" name="file"/>
                             </div>
-                            <button type="submit" class="btn btn-default">提交</button>
+                            <div class="form-group">
+                                <label for="exampleInputFile">选择要导入的特殊日期</label><input type="file" name="tsfile"/>
+                            </div>
+                            <button type="submit" class="btn btn-success">提交</button>
                         </form>
                         <br/>
-                        <a type="button" class="btn btn-default" target="_blank" href="/daka/dakaData">查看详细的打卡记录</a>
+                        <a type="button" class="btn btn-info" target="_blank" href="/daka/dakaData">查看详细的打卡记录</a>
                     </div>
                     <div class="tab-pane" id="panel-149161">
                         <br/><br/>
-                        <button type="button" class="btn btn-default" onclick="window.location.href='/daka/exportData'">导出</button>
+                        <button type="button" class="btn btn-success" onclick="window.location.href='/daka/exportData'">导出打卡考勤数据</button>
                     </div>
                     <div class="tab-pane" id="panel-149162">
                         <br/><br/>
@@ -51,10 +54,10 @@
                             <div class="form-group">
                                 <label for="exampleInputFile">选择文件</label><input type="file" name="mfile" />
                             </div>
-                            <button type="submit" class="btn btn-default">提交</button>
+                            <button type="submit" class="btn btn-success">提交</button>
                         </form>
                         <br/>
-                        <a type="button" class="btn btn-default" target="_blank" href="/daka/memberData">查看详细的人员部门数据</a>
+                        <a type="button" class="btn btn-info" target="_blank" href="/daka/memberData">查看详细的人员部门数据</a>
                         <br/>
                     </div>
                 </div>
