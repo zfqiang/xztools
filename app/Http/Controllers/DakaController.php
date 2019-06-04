@@ -161,7 +161,6 @@ class DakaController extends CommonController
 
                     $row3++;
                 }
-                break;
                 $column2++;
             }
         }
