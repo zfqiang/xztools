@@ -59,7 +59,7 @@
                 @endforeach
                 </tbody>
             </table>
-            {!! $datas->links() !!}
+            {!! $datas->appends(['name' => $name ])->links() !!}
         </div>
     </div>
 </div>

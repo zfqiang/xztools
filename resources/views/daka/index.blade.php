@@ -35,9 +35,6 @@
                             <div class="form-group">
                                 <label for="exampleInputFile">选择要导入的考勤数据</label><input type="file" name="file"/>
                             </div>
-                            <div class="form-group">
-                                <label for="exampleInputFile">选择要导入的特殊日期</label><input type="file" name="tsfile"/>
-                            </div>
                             <button type="submit" class="btn btn-success">提交</button>
                         </form>
                         <br/>

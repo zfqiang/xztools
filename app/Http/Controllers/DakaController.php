@@ -70,10 +70,13 @@ class DakaController extends CommonController
     {
         //查询打卡数据
         $dakas = DB::table('members_daka')
-                        ->get(['name', 'date_time', 'department']);
+                        ->get(['name', 'date_time', 'department', 'sxw']);
         $dks = [];
         foreach ($dakas as $daka){
-            $dks[$daka->department][$daka->name][] = str_replace('/', '-', $daka->date_time);
+            $dks[$daka->department][$daka->name][] = [
+                'date_time' => str_replace('/', '-', $daka->date_time),
+                'sxw' => $daka->sxw
+            ];
         }
 
         $path = storage_path() . '/template/template.xls';
@@ -100,7 +103,6 @@ class DakaController extends CommonController
                 //下午格子
                 $xwgz = $swgz + 1;
 
-                var_dump($swgz . '==='. $xwgz);
                 //设置单元格背景色
                 $spreadsheet->getActiveSheet()->getStyleByColumnAndRow(1, $swgz, $endIndex, $swgz)->getFill()->setFillType(Fill::FILL_SOLID);
                 $spreadsheet->getActiveSheet()->getStyleByColumnAndRow(1, $swgz, $endIndex, $swgz)->getFill()->getStartColor()->setARGB('0xF0B000');
@@ -111,6 +113,17 @@ class DakaController extends CommonController
 
         //---------------------设置周末单元格背景---------------
 
+        //查询特殊日期
+        $tsdatas = DB::table('daka_normal')->get();
+        $fjdata = [];
+        $bbdata = [];
+        foreach ($tsdatas as $ts){
+            if($ts->type == 1){
+                $fjdata[] = $ts->date;
+            }else{
+                $bbdata[] = $ts->date;
+            }
+        }
 
         //部门索引
         $column1 = 3;
@@ -128,7 +141,10 @@ class DakaController extends CommonController
             $column1 = $last1;
 
 
-            foreach ($dk as $name => $times){
+            foreach ($dk as $name => $ddk){
+                $times = array_column($ddk, 'date_time');
+                $sxwArr = array_column($ddk, 'sxw', 'date_time');
+
                 $spreadsheet->getActiveSheet()->getCellByColumnAndRow($column2,$row2)->setValue($name);
 
                 // 使用给定的用户定义函数对数组排序--升序
@@ -149,13 +165,26 @@ class DakaController extends CommonController
                     $day = date('d', strtotime($time));
                     $hour = date('H', strtotime($time));
                     $val = date('H:i:s', strtotime($time));
+                    $date = date('Y-m-d', strtotime($time));
 
-                    if($hour>= 0 && $hour <= 12){
+
+                    $daotime = '正常';
+                    if($sxwArr[$time] == 1){
                         //上午格子
                         $row3 = $startIndex + ($day - 1) * 2;
+                        $daotime = $this->checkTsDate($department, $time, 1);
+
                     }else{
                         //下午格子
                         $row3 = $startIndex + ($day - 1) * 2 + 1;
+                        $daotime = $this->checkTsDate($department, $time, 2);
+                    }
+
+                    //获取表格的背景色
+                    $ARGB = $this->getARGB($daotime);
+                    if(!empty($ARGB)){
+                        $spreadsheet->getActiveSheet()->getStyleByColumnAndRow($column2, $row3, $column2, $row3)->getFill()->setFillType(Fill::FILL_SOLID);
+                        $spreadsheet->getActiveSheet()->getStyleByColumnAndRow($column2, $row3, $column2, $row3)->getFill()->getStartColor()->setARGB($ARGB);
                     }
                     $spreadsheet->getActiveSheet()->getCellByColumnAndRow($column2, $row3)->setValue($val);
 
@@ -169,19 +198,6 @@ class DakaController extends CommonController
         $writer->save('write.xls');
     }
 
-    //PHP程序排序数组的日期
-    //用户自定义的比较函数
-    //基于时间戳
-    public function compareByTimeStamp($time1, $time2)
-    {
-        if (strtotime($time1) < strtotime($time2)){
-            return 1;
-        } else if (strtotime($time1) > strtotime($time2)){
-            return -1;
-        } else {
-            return 0;
-        }
-    }
 
 
     //Excel文件导入功能
@@ -212,11 +228,11 @@ class DakaController extends CommonController
 
 
         //插入特殊日期
-        $tsfile = $request->file('tsfile');
+//        $tsfile = $request->file('tsfile');
         $reader2 = IOFactory::createReader('Xls');
         $reader2->setReadDataOnly(TRUE);
-        $spreadsheet2 = $reader->load($tsfile); //载入excel表格
-        $worksheet2 = $spreadsheet2->getActiveSheet(1);
+        $spreadsheet2 = $reader->load($file); //载入excel表格
+        $worksheet2 = $spreadsheet2->getSheet(1);
         $highestRow2 = $worksheet2->getHighestRow(); // 总行数
         $lines2 = $highestRow2 - 1;
         if ($lines2 > 0) {
@@ -252,6 +268,9 @@ class DakaController extends CommonController
 
             $hour = date('H', strtotime($date_time));
 
+            //处理特殊打卡记录
+            $this->checkTsDakaData($name, $date_time, $bms);
+
             if($hour >= 0 && $hour <= 13){
                 $daka = DB::table('members_daka')->where('name', $name)
                                 ->whereBetween('date_time', [$date . ' 00:00:00', $date . ' 12:59:59'])->first();
@@ -263,6 +282,7 @@ class DakaController extends CommonController
                             'name' => $name,
                             'date_time' => $date_time,
                             'department' => isset($bms[$name])?$bms[$name]:null,
+                            'sxw' => 1,
                         ];
 
                         DB::table('members_daka')->insert($data);
@@ -272,6 +292,7 @@ class DakaController extends CommonController
                         'name' => $name,
                         'date_time' => $date_time,
                         'department' => isset($bms[$name])?$bms[$name]:null,
+                        'sxw' => 1,
                     ];
 
                     DB::table('members_daka')->insert($data);
@@ -287,6 +308,7 @@ class DakaController extends CommonController
                             'name' => $name,
                             'date_time' => $date_time,
                             'department' => isset($bms[$name])?$bms[$name]:null,
+                            'sxw' => 2,
                         ];
 
                         DB::table('members_daka')->insert($data);
@@ -296,6 +318,7 @@ class DakaController extends CommonController
                         'name' => $name,
                         'date_time' => $date_time,
                         'department' => isset($bms[$name])?$bms[$name]:null,
+                        'sxw' => 2,
                     ];
 
                     DB::table('members_daka')->insert($data);
