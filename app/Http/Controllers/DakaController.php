@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Color;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 
 class DakaController extends CommonController
@@ -104,10 +105,14 @@ class DakaController extends CommonController
                 $xwgz = $swgz + 1;
 
                 //设置单元格背景色
-                $spreadsheet->getActiveSheet()->getStyleByColumnAndRow(1, $swgz, $endIndex, $swgz)->getFill()->setFillType(Fill::FILL_SOLID);
-                $spreadsheet->getActiveSheet()->getStyleByColumnAndRow(1, $swgz, $endIndex, $swgz)->getFill()->getStartColor()->setARGB('0xF0B000');
-                $spreadsheet->getActiveSheet()->getStyleByColumnAndRow(1, $xwgz, $endIndex, $xwgz)->getFill()->setFillType(Fill::FILL_SOLID);
-                $spreadsheet->getActiveSheet()->getStyleByColumnAndRow(1, $xwgz, $endIndex, $xwgz)->getFill()->getStartColor()->setARGB('0xF0B000');
+                $spreadsheet->getActiveSheet()->getStyleByColumnAndRow(1, $swgz, $endIndex, $swgz)
+                    ->getFill()->setFillType(Fill::FILL_SOLID);
+                $spreadsheet->getActiveSheet()->getStyleByColumnAndRow(1, $swgz, $endIndex, $swgz)
+                    ->getFill()->getStartColor()->setARGB('FFF0B000');
+                $spreadsheet->getActiveSheet()->getStyleByColumnAndRow(1, $xwgz, $endIndex, $xwgz)
+                    ->getFill()->setFillType(Fill::FILL_SOLID);
+                $spreadsheet->getActiveSheet()->getStyleByColumnAndRow(1, $xwgz, $endIndex, $xwgz)
+                    ->getFill()->getStartColor()->setARGB('FFF0B000');
             }
         }
 
@@ -183,8 +188,10 @@ class DakaController extends CommonController
                     //获取表格的背景色
                     $ARGB = $this->getARGB($daotime);
                     if(!empty($ARGB)){
-                        $spreadsheet->getActiveSheet()->getStyleByColumnAndRow($column2, $row3, $column2, $row3)->getFill()->setFillType(Fill::FILL_SOLID);
-                        $spreadsheet->getActiveSheet()->getStyleByColumnAndRow($column2, $row3, $column2, $row3)->getFill()->getStartColor()->setARGB($ARGB);
+                        $spreadsheet->getActiveSheet()->getStyleByColumnAndRow($column2, $row3, $column2, $row3)
+                            ->getFill()->setFillType(Fill::FILL_SOLID);
+                        $spreadsheet->getActiveSheet()->getStyleByColumnAndRow($column2, $row3, $column2, $row3)
+                            ->getFill()->getStartColor()->setARGB($ARGB);
                     }
                     $spreadsheet->getActiveSheet()->getCellByColumnAndRow($column2, $row3)->setValue($val);
 
@@ -194,8 +201,18 @@ class DakaController extends CommonController
             }
         }
 
+        $file_name = $yearMonth . '打卡数据统计.xls';
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment;filename="'.$file_name.'"');
+        header('Cache-Control: max-age=0');
         $writer = IOFactory::createWriter($spreadsheet, 'Xls');
-        $writer->save('write.xls');
+
+        $writer->save('php://output');
+
+        $spreadsheet->disconnectWorksheets();
+        unset($spreadsheet);
+//        $writer = IOFactory::createWriter($spreadsheet, 'Xls');
+//        $writer->save('write.xls');
     }
 
 
@@ -261,68 +278,12 @@ class DakaController extends CommonController
         for ($row = 2; $row <= $highestRow; $row++) {
             $name = $worksheet->getCellByColumnAndRow(2, $row)->getValue();
             $date_time = $worksheet->getCellByColumnAndRow(4, $row)->getValue();
+            if(!empty($name)){
+                $date_time = str_replace('/', '-', $date_time);
+                $date_time = date('Y-m-d H:i:s', strtotime($date_time));
 
-            $date_time = str_replace('/', '-', $date_time);
-            $date_time = date('Y-m-d H:i:s', strtotime($date_time));
-            $date = date('Y-m-d', strtotime($date_time));
-
-            $hour = date('H', strtotime($date_time));
-
-            //处理特殊打卡记录
-            $this->checkTsDakaData($name, $date_time, $bms);
-
-            if($hour >= 0 && $hour <= 13){
-                $daka = DB::table('members_daka')->where('name', $name)
-                                ->whereBetween('date_time', [$date . ' 00:00:00', $date . ' 12:59:59'])->first();
-                if(!empty($daka)){
-                    if(strtotime($daka->date_time) > strtotime($date_time)){
-                        DB::table('members_daka')->delete($daka->id);
-
-                        $data = [
-                            'name' => $name,
-                            'date_time' => $date_time,
-                            'department' => isset($bms[$name])?$bms[$name]:null,
-                            'sxw' => 1,
-                        ];
-
-                        DB::table('members_daka')->insert($data);
-                    }
-                }else{
-                    $data = [
-                        'name' => $name,
-                        'date_time' => $date_time,
-                        'department' => isset($bms[$name])?$bms[$name]:null,
-                        'sxw' => 1,
-                    ];
-
-                    DB::table('members_daka')->insert($data);
-                }
-            }else{
-                $daka = DB::table('members_daka')->where('name', $name)
-                            ->whereBetween('date_time', [$date . ' 13:00:00', $date . ' 23:59:59'])->first();
-                if(!empty($daka)){
-                    if(strtotime($daka->date_time) < strtotime($date_time)){
-                        DB::table('members_daka')->delete($daka->id);
-
-                        $data = [
-                            'name' => $name,
-                            'date_time' => $date_time,
-                            'department' => isset($bms[$name])?$bms[$name]:null,
-                            'sxw' => 2,
-                        ];
-
-                        DB::table('members_daka')->insert($data);
-                    }
-                }else{
-                    $data = [
-                        'name' => $name,
-                        'date_time' => $date_time,
-                        'department' => isset($bms[$name])?$bms[$name]:null,
-                        'sxw' => 2,
-                    ];
-
-                    DB::table('members_daka')->insert($data);
-                }
+                //处理特殊打卡记录
+                $this->checkTsDakaData($name, $date_time, $bms);
             }
         }
 

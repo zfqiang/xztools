@@ -144,6 +144,8 @@ class CommonController extends Controller
 
     public function checkTsDakaData($name, $date_time, $bms){
         $date = date('Y-m-d', strtotime($date_time));
+        $hour = date('H', strtotime($date_time));
+
         //查询特殊日期
         $tsdatas = DB::table('daka_normal')->get();
         $fjdata = [];
@@ -158,12 +160,114 @@ class CommonController extends Controller
 
         //加班的-记录第一条和最后一条数据
         if(in_array($date, $fjdata)){
-            $jbdaka = DB::table('members_daka')->where('name', $name)
-                ->whereBetween('date_time', [$date . ' 00:00:00', $date . ' 12:59:59'])
-                ->orderBy('date_time', 'asc')
-                ->get();
-            if(empty($jbdaka)){
-                //第一条数据标记为上午数据
+            $this->tsDataDeal($name, $date_time, $bms);
+
+        }else{
+            if($this->checkWeekend($date)){
+                $this->tsDataDeal($name, $date_time, $bms);
+            }else{
+                $this->workDayDeal($name, $date_time, $bms);
+            }
+        }
+    }
+
+
+    //针对假期和周末加班数据处理
+    public function tsDataDeal($name, $date_time, $bms){
+        $date = date('Y-m-d', strtotime($date_time));
+        $jbdaka = DB::table('members_daka')->where('name', $name)
+                    ->whereBetween('date_time', [$date . ' 00:00:00', $date . ' 23:59:59'])
+                    ->orderBy('date_time', 'asc')
+                    ->get();
+
+        if(count($jbdaka) == 0){
+            //第一条数据标记为上午数据
+            $data = [
+                'name' => $name,
+                'date_time' => $date_time,
+                'department' => isset($bms[$name])?$bms[$name]:null,
+                'sxw' => 1,
+            ];
+
+            DB::table('members_daka')->insert($data);
+
+        }else{
+
+            if(count($jbdaka) == 1){
+
+                //有一条数据判断打卡时间是否大于数据库数据的时间，如果大于，标记为下午数据，反之修改数据库第一条为下午数据，新读取的为上午数据
+                if(strtotime($jbdaka[0]->date_time) > strtotime($date_time)){
+                    DB::table('members_daka')->where('id', $jbdaka[0]->id)->update(['sxw' => 2]);
+
+                    $data = [
+                        'name' => $name,
+                        'date_time' => $date_time,
+                        'department' => isset($bms[$name])?$bms[$name]:null,
+                        'sxw' => 1,
+                    ];
+
+                    DB::table('members_daka')->insert($data);
+                }else{
+                    $data = [
+                        'name' => $name,
+                        'date_time' => $date_time,
+                        'department' => isset($bms[$name])?$bms[$name]:null,
+                        'sxw' => 2,
+                    ];
+
+                    DB::table('members_daka')->insert($data);
+                }
+            }else{
+                $swdata = $jbdaka[0];
+                if(strtotime($swdata->date_time) > strtotime($date_time)){
+                    $data = [
+                        'name' => $name,
+                        'date_time' => $date_time,
+                        'department' => isset($bms[$name])?$bms[$name]:null,
+                        'sxw' => 1,
+                    ];
+
+                    DB::table('members_daka')->insert($data);
+                    DB::table('members_daka')->delete($swdata->id);
+                }
+                $xwdata = $jbdaka[1];
+                if(strtotime($xwdata->date_time) < strtotime($date_time)){
+                    $data = [
+                        'name' => $name,
+                        'date_time' => $date_time,
+                        'department' => isset($bms[$name])?$bms[$name]:null,
+                        'sxw' => 2,
+                    ];
+
+                    DB::table('members_daka')->insert($data);
+                    DB::table('members_daka')->delete($xwdata->id);
+                }
+            }
+        }
+    }
+
+    //针对正常工作日数据处理
+    public function workDayDeal($name, $date_time, $bms){
+        $date = date('Y-m-d', strtotime($date_time));
+        $hour = date('H', strtotime($date_time));
+
+        if($hour >= 0 && $hour <= 13){
+            $daka = DB::table('members_daka')->where('name', $name)
+                        ->whereBetween('date_time', [$date . ' 00:00:00', $date . ' 12:59:59'])->first();
+            if(!empty($daka)){
+                if(strtotime($daka->date_time) > strtotime($date_time)){
+                    DB::table('members_daka')->delete($daka->id);
+
+                    $data = [
+                        'name' => $name,
+                        'date_time' => $date_time,
+                        'department' => isset($bms[$name])?$bms[$name]:null,
+                        'sxw' => 1,
+                    ];
+
+                    DB::table('members_daka')->insert($data);
+                }
+            }else{
                 $data = [
                     'name' => $name,
                     'date_time' => $date_time,
@@ -172,57 +276,33 @@ class CommonController extends Controller
                 ];
 
                 DB::table('members_daka')->insert($data);
-            }else{
-                if(count($jbdaka) == 1){
-                    //有一条数据判断打卡时间是否大于数据库数据的时间，如果大于，标记为下午数据，反之修改数据库第一条为下午数据，新读取的为上午数据
-                    if(strtotime($jbdaka[0]->date_time) > strtotime($date_time)){
-                        $data = [
-                            'name' => $name,
-                            'date_time' => $date_time,
-                            'department' => isset($bms[$name])?$bms[$name]:null,
-                            'sxw' => 2,
-                        ];
-
-                        DB::table('members_daka')->insert($data);
-                    }else{
-                        DB::table('members_daka')->where('id', $jbdaka[0]->id)->update(['sxw' => 2]);
-                        $data = [
-                            'name' => $name,
-                            'date_time' => $date_time,
-                            'department' => isset($bms[$name])?$bms[$name]:null,
-                            'sxw' => 1,
-                        ];
-
-                        DB::table('members_daka')->insert($data);
-                    }
-                }else{
-                    $swdata = $jbdaka[0];
-                    if(strtotime($swdata->date_time) > strtotime($date_time)){
-                        $data = [
-                            'name' => $name,
-                            'date_time' => $date_time,
-                            'department' => isset($bms[$name])?$bms[$name]:null,
-                            'sxw' => 1,
-                        ];
-
-                        DB::table('members_daka')->insert($data);
-                        DB::table('members_daka')->delete($swdata->id);
-                    }
-                    $xwdata = $jbdaka[1];
-                    if(strtotime($xwdata->date_time) < strtotime($date_time)){
-                        $data = [
-                            'name' => $name,
-                            'date_time' => $date_time,
-                            'department' => isset($bms[$name])?$bms[$name]:null,
-                            'sxw' => 2,
-                        ];
-
-                        DB::table('members_daka')->insert($data);
-                        DB::table('members_daka')->delete($swdata->id);
-                    }
-                }
             }
+        }else{
+            $daka = DB::table('members_daka')->where('name', $name)
+                ->whereBetween('date_time', [$date . ' 13:00:00', $date . ' 23:59:59'])->first();
+            if(!empty($daka)){
+                if(strtotime($daka->date_time) < strtotime($date_time)){
+                    DB::table('members_daka')->delete($daka->id);
 
+                    $data = [
+                        'name' => $name,
+                        'date_time' => $date_time,
+                        'department' => isset($bms[$name])?$bms[$name]:null,
+                        'sxw' => 2,
+                    ];
+
+                    DB::table('members_daka')->insert($data);
+                }
+            }else{
+                $data = [
+                    'name' => $name,
+                    'date_time' => $date_time,
+                    'department' => isset($bms[$name])?$bms[$name]:null,
+                    'sxw' => 2,
+                ];
+
+                DB::table('members_daka')->insert($data);
+            }
         }
     }
 

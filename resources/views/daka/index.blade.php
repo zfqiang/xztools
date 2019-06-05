@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Bootstrap 实例 - 标签页（Tab）插件方法</title>
+    <title>打卡考勤数据处理</title>
     <link rel="stylesheet" href="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/css/bootstrap.min.css">
     <script src="https://cdn.staticfile.org/jquery/2.1.1/jquery.min.js"></script>
     <script src="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
@@ -30,14 +30,15 @@
                 <div class="tab-content">
                     <div class="tab-pane active" id="panel-758874">
                         <br/><br/>
-                        <form  action="/daka/importData" method="post" enctype="multipart/form-data">
+                        <form  action="/daka/importData" id="dakaForm" method="post" enctype="multipart/form-data" onsubmit="subdakaForm();return false;">
                             <input type="hidden" name="_token" value="<?php echo csrf_token(); ?>">
                             <div class="form-group">
-                                <label for="exampleInputFile">选择要导入的考勤数据</label><input type="file" name="file"/>
+                                <label for="exampleInputFile">选择要导入的考勤数据</label><input type="file" id="file" name="file"/>
                             </div>
                             <button type="submit" class="btn btn-success">提交</button>
                         </form>
                         <br/>
+                        <a type="button" class="btn btn-info" target="_blank" href="/files/template.xls">下载导入文件模板</a>
                         <a type="button" class="btn btn-info" target="_blank" href="/daka/dakaData">查看详细的打卡记录</a>
                     </div>
                     <div class="tab-pane" id="panel-149161">
@@ -46,10 +47,10 @@
                     </div>
                     <div class="tab-pane" id="panel-149162">
                         <br/><br/>
-                        <form action="/daka/importMembers" method="post" enctype="multipart/form-data">
+                        <form action="/daka/importMembers" id="memberForm" method="post" enctype="multipart/form-data" onsubmit="submemberForm();return false;">
                             <input type="hidden" name="_token" value="<?php echo csrf_token(); ?>">
                             <div class="form-group">
-                                <label for="exampleInputFile">选择文件</label><input type="file" name="mfile" />
+                                <label for="exampleInputFile">选择文件</label><input type="file" id="mfile" name="mfile" />
                             </div>
                             <button type="submit" class="btn btn-success">提交</button>
                         </form>
@@ -68,7 +69,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-                <h4 class="modal-title" id="myModalLabel">模态框（Modal）标题</h4>
+                <h4 class="modal-title" id="myModalLabel">提示信息</h4>
             </div>
             <div class="modal-body">按下 ESC 按钮退出。</div>
             <div class="modal-footer">
@@ -109,7 +110,22 @@
         $('#tabs-804584 > ul > li').eq(2).removeClass('active');
         $('#panel-149162').removeClass('active');
     @endif
-
+    function subdakaForm() {
+        if($('#file').val() == ''){
+            $('#myModal .modal-body').html('上传的附件不能为空');
+            $('#myModal').modal('show');
+            return false;
+        }
+        $("#dakaForm").submit();
+    }
+    function submemberForm() {
+        if($('#mfile').val() == ''){
+            $('#myModal .modal-body').html('上传的附件不能为空');
+            $('#myModal').modal('show');
+            return false;
+        }
+        $("#memberForm").submit();
+    }
 
 </script>
 <style>
