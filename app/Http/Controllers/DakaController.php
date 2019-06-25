@@ -224,6 +224,7 @@ class DakaController extends CommonController
         $reader->setReadDataOnly(TRUE);
         $spreadsheet = $reader->load($file); //载入excel表格
 
+        $sheetCount = count($spreadsheet->getAllSheets());
         $worksheet = $spreadsheet->getActiveSheet();
         $highestRow = $worksheet->getHighestRow(); // 总行数
 
@@ -244,36 +245,37 @@ class DakaController extends CommonController
         DB::table('daka_normal')->delete();
 
 
-        //插入特殊日期
-//        $tsfile = $request->file('tsfile');
-        $reader2 = IOFactory::createReader('Xls');
-        $reader2->setReadDataOnly(TRUE);
-        $spreadsheet2 = $reader->load($file); //载入excel表格
-        $worksheet2 = $spreadsheet2->getSheet(1);
-        $highestRow2 = $worksheet2->getHighestRow(); // 总行数
-        $lines2 = $highestRow2 - 1;
-        if ($lines2 > 0) {
-            for ($row2 = 2; $row2 <= $highestRow2; $row2++) {
-                $fading_time = $worksheet2->getCellByColumnAndRow(1, $row2)->getValue();
-                $buban_time = $worksheet2->getCellByColumnAndRow(2, $row2)->getValue();
-                if(!empty($fading_time)){
-                    $data = [
-                        'date' => $fading_time,
-                        'type' => 1,
-                    ];
-                    DB::table('daka_normal')->insert($data);
-                }
+        if($sheetCount > 1){
+            //插入特殊日期
+    //        $tsfile = $request->file('tsfile');
+            $reader2 = IOFactory::createReader('Xls');
+            $reader2->setReadDataOnly(TRUE);
+            $spreadsheet2 = $reader->load($file); //载入excel表格
+            $worksheet2 = $spreadsheet2->getSheet(1);
+            $highestRow2 = $worksheet2->getHighestRow(); // 总行数
+            $lines2 = $highestRow2 - 1;
+            if ($lines2 > 0) {
+                for ($row2 = 2; $row2 <= $highestRow2; $row2++) {
+                    $fading_time = $worksheet2->getCellByColumnAndRow(1, $row2)->getValue();
+                    $buban_time = $worksheet2->getCellByColumnAndRow(2, $row2)->getValue();
+                    if(!empty($fading_time)){
+                        $data = [
+                            'date' => $fading_time,
+                            'type' => 1,
+                        ];
+                        DB::table('daka_normal')->insert($data);
+                    }
 
-                if(!empty($buban_time)){
-                    $data = [
-                        'date' => $buban_time,
-                        'type' => 2,
-                    ];
-                    DB::table('daka_normal')->insert($data);
+                    if(!empty($buban_time)){
+                        $data = [
+                            'date' => $buban_time,
+                            'type' => 2,
+                        ];
+                        DB::table('daka_normal')->insert($data);
+                    }
                 }
             }
         }
-
         //处理打卡数据
         for ($row = 2; $row <= $highestRow; $row++) {
             $name = $worksheet->getCellByColumnAndRow(2, $row)->getValue();
